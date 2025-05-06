@@ -50,12 +50,18 @@ class Cliente {
   });
 
   /// Constrói Cliente a partir de um Map (por exemplo, snapshot.value)
-  factory Cliente.fromMap(String id, Map<String, dynamic> map) {
+  factory Cliente.fromMap(dynamic id, Map<String, dynamic> map) {
+    final idStr = id.toString();
+    final repVal = map['representanteId'];
+    final repId = repVal != null ? repVal.toString() : '';
+    final maxVal = map['maxUsuariosPorRepresentante'];
+    final maxUsers =
+        maxVal is int ? maxVal : int.tryParse(maxVal.toString()) ?? 0;
     return Cliente(
-      id: id,
-      nome: map['nome'] as String,
-      representanteId: map['representanteId'] as String,
-      maxUsuariosPorRepresentante: map['maxUsuariosPorRepresentante'] as int,
+      id: idStr,
+      nome: map['nome'] as String? ?? '',
+      representanteId: repId,
+      maxUsuariosPorRepresentante: maxUsers,
       dispositivos:
           (map['dispositivos'] as Map?)?.keys.cast<String>().toList() ?? [],
     );
@@ -93,10 +99,10 @@ class Usuario {
   factory Usuario.fromMap(String id, Map<String, dynamic> map) {
     return Usuario(
       id: id,
-      name: map['name'] as String,
-      email: map['email'] as String,
+      name: map['name'] as String? ?? '',
+      email: map['email'] as String? ?? '',
       perfil: PerfilTipoExtension.fromId(map['perfilId'] as int),
-      clienteId: map['clienteId'] as String?,
+      clienteId: map['clienteId']?.toString(),
       dispositivosPermitidos:
           (map['dispositivos'] as Map?)?.entries
               .where((e) => e.value == true)
@@ -108,14 +114,14 @@ class Usuario {
 
   /// Converte o Usuario em Map para escrita no Firebase
   Map<String, dynamic> toMap() {
-    final map = {
+    final map = <String, dynamic>{
       'name': name,
       'email': email,
       'perfilId': perfil.id,
       'dispositivos': {for (var d in dispositivosPermitidos) d: true},
     };
     if (clienteId != null) {
-      map['clienteId'] = clienteId;
+      map['clienteId'] = clienteId!;
     }
     return map;
   }
