@@ -1,13 +1,15 @@
-// Importações necessárias para o funcionamento do aplicativo
+// lib/pages/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/database_service.dart';
+import '../models/models.dart';
 import 'overview_page.dart';
 import 'history_page.dart';
 import 'graphs_page.dart';
 import 'settings_page.dart';
+import 'clientes_page.dart';
+import 'cliente_form_page.dart';
 
-// Define o widget principal da tela inicial como um StatefulWidget
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -15,137 +17,127 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-// Estado associado ao HomeScreen
 class _HomeScreenState extends State<HomeScreen> {
-  // Lista de dispositivos disponíveis para o usuário
   List<String> _devices = [];
-  // Dispositivo atualmente selecionado
   String? _selectedDevice;
-  // Página atualmente exibida
   Widget _page = const Center(child: CircularProgressIndicator());
-  // Indicador de carregamento dos dispositivos
   bool _loadingDevices = true;
+  bool _isAllowed = false;
 
   @override
   void initState() {
     super.initState();
-    // Carrega os dispositivos ao inicializar o estado
-    _loadDevices();
+    _loadDevicesAndPermissions();
   }
 
-  // Método assíncrono para carregar os dispositivos do usuário
-  Future<void> _loadDevices() async {
-    final uid =
-        FirebaseAuth
-            .instance
-            .currentUser!
-            .uid; // Obtém o UID do usuário autenticado
-    // Obtém a lista de IDs de dispositivos permitidos para o usuário
-    final devices =
-        await DatabaseService.forUserDevices(uid).permittedDeviceIds();
-    setState(() {
-      _devices = devices; // Atualiza a lista de dispositivos
-      _loadingDevices = false; // Indica que o carregamento terminou
-      if (_devices.isNotEmpty) {
-        _selectedDevice =
-            _devices.first; // Seleciona o primeiro dispositivo por padrão
-        _page = OverviewPage(
-          deviceId: _selectedDevice!,
-        ); // Define a página inicial como "Visão Geral"
-      }
-    });
+  Future<void> _loadDevicesAndPermissions() async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    try {
+      // Permissões do usuário
+      final user = await DatabaseService.forUserDevices(uid).getUsuario(uid);
+      _isAllowed =
+          user.perfil == PerfilTipo.admin ||
+          user.perfil == PerfilTipo.moderador;
+      // Dispositivos permitidos
+      final devices =
+          await DatabaseService.forUserDevices(uid).permittedDeviceIds();
+      setState(() {
+        _devices = devices;
+        _loadingDevices = false;
+        if (_devices.isNotEmpty) {
+          _selectedDevice = _devices.first;
+          _page = OverviewPage(deviceId: _selectedDevice!);
+        }
+      });
+    } catch (e) {
+      // Tratar erros
+      setState(() {
+        _devices = [];
+        _loadingDevices = false;
+      });
+      debugPrint('Erro ao carregar dados iniciais: $e');
+    }
   }
 
-  // Método para alternar entre páginas
   void _switchPage(Widget page) {
-    setState(() => _page = page); // Atualiza a página exibida
-    Navigator.pop(context); // Fecha o menu lateral (drawer)
+    setState(() => _page = page);
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Exibe um indicador de carregamento enquanto os dispositivos estão sendo carregados
     if (_loadingDevices) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    // Exibe uma mensagem caso não haja dispositivos disponíveis
     if (_devices.isEmpty) {
       return const Scaffold(
         body: Center(child: Text('Nenhum dispositivo disponível')),
       );
     }
 
-    // Estrutura principal da tela
     return Scaffold(
       appBar: AppBar(
-        // Dropdown para selecionar o dispositivo
         title: DropdownButton<String>(
-          value: _selectedDevice, // Dispositivo atualmente selecionado
-          dropdownColor: Theme.of(context).canvasColor, // Cor do dropdown
-          underline: const SizedBox(), // Remove a linha sublinhada
+          value: _selectedDevice,
+          dropdownColor: Theme.of(context).canvasColor,
+          underline: const SizedBox(),
           onChanged: (id) {
             if (id == null) return;
             setState(() {
-              _selectedDevice = id; // Atualiza o dispositivo selecionado
-              _page = OverviewPage(deviceId: id); // Atualiza a página exibida
+              _selectedDevice = id;
+              _page = OverviewPage(deviceId: id);
             });
           },
-          // Lista de dispositivos como itens do dropdown
           items:
               _devices
                   .map(
                     (d) => DropdownMenuItem(
                       value: d,
-                      child: Text(
-                        'Dispositivo $d',
-                      ), // Exibe o nome do dispositivo
+                      child: Text('Dispositivo $d'),
                     ),
                   )
                   .toList(),
         ),
       ),
-      // Menu lateral (drawer) com opções de navegação
       drawer: Drawer(
         child: ListView(
           children: [
-            const DrawerHeader(child: Text('Menu')), // Cabeçalho do menu
+            const DrawerHeader(child: Text('Menu')),
             ListTile(
-              leading: const Icon(Icons.home), // Ícone
-              title: const Text('Visão Geral'), // Texto
+              leading: const Icon(Icons.home),
+              title: const Text('Visão Geral'),
               onTap:
-                  () => _switchPage(
-                    OverviewPage(deviceId: _selectedDevice!),
-                  ), // Navega para a página "Visão Geral"
+                  () => _switchPage(OverviewPage(deviceId: _selectedDevice!)),
             ),
             ListTile(
               leading: const Icon(Icons.history),
               title: const Text('Histórico'),
-              onTap:
-                  () => _switchPage(
-                    HistoryPage(deviceId: _selectedDevice!),
-                  ), // Navega para a página "Histórico"
+              onTap: () => _switchPage(HistoryPage(deviceId: _selectedDevice!)),
             ),
             ListTile(
               leading: const Icon(Icons.show_chart),
               title: const Text('Gráficos'),
-              onTap:
-                  () => _switchPage(
-                    GraphsPage(deviceId: _selectedDevice!),
-                  ), // Navega para a página "Gráficos"
+              onTap: () => _switchPage(GraphsPage(deviceId: _selectedDevice!)),
             ),
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Configurações'),
-              onTap:
-                  () => _switchPage(
-                    SettingsPage(),
-                  ), // Navega para a página "Configurações"
+              onTap: () => _switchPage(SettingsPage()),
             ),
+            // Botão CRUD Clientes somente para Admin/Moderador
+            if (_isAllowed)
+              ListTile(
+                leading: const Icon(Icons.people),
+                title: const Text('Clientes'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).pushNamed('/clientes');
+                },
+              ),
           ],
         ),
       ),
-      body: _page, // Exibe a página selecionada
+      body: _page,
     );
   }
 }
-// O código acima define a tela inicial de um aplicativo Flutter que exibe uma lista de dispositivos disponíveis para o usuário autenticado. O usuário pode selecionar um dispositivo e navegar entre diferentes páginas, como Visão Geral, Histórico, Gráficos e Configurações. A tela também inclui um menu lateral (drawer) para facilitar a navegação entre as páginas.,

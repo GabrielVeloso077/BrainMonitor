@@ -10,6 +10,10 @@ import 'pages/sign_in_page.dart';
 import 'pages/sign_up_page.dart';
 import 'pages/forgot_password_page.dart';
 import 'pages/home_screen.dart';
+import 'pages/clientes_page.dart';
+import 'pages/cliente_form_page.dart';
+import 'pages/register_user_page.dart';
+import 'models/models.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +40,9 @@ class MyApp extends StatelessWidget {
         '/signup': (_) => const SignUpPage(),
         '/forgot': (_) => const ForgotPasswordPage(),
         '/home': (_) => const HomeScreen(),
+        // Novas rotas para CRUD de Clientes:
+        '/clientes': (_) => const ClientesPage(),
+        '/clienteForm': (_) => const ClienteFormPage(),
       },
     );
   }
