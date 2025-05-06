@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "966677763899",
+    "firebase_url": "https://teste1-ed9c8-default-rtdb.firebaseio.com",
+    "project_id": "teste1-ed9c8",
+    "storage_bucket": "teste1-ed9c8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966677763899:android:c4d6debe7efb77a915491e",
+        "android_client_info": {
+          "package_name": "com.example.brainmonitor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcByfL0TH5rk76jDhONd-GOe-_jJ6dUo8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
