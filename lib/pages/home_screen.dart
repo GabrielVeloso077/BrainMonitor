@@ -9,6 +9,10 @@ import 'graphs_page.dart';
 import 'settings_page.dart';
 import 'clientes_page.dart';
 import 'cliente_form_page.dart';
+import 'usuarios_page.dart';
+import 'usuario_form_page.dart';
+import 'dispositivos_page.dart';
+import 'dispositivos_form_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -125,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () => _switchPage(SettingsPage()),
             ),
             // Botão CRUD Clientes somente para Admin/Moderador
-            if (_isAllowed)
+            if (_isAllowed) ...[
               ListTile(
                 leading: const Icon(Icons.people),
                 title: const Text('Clientes'),
@@ -134,6 +138,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.of(context).pushNamed('/clientes');
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.people_outline),
+                title: const Text('Usuários'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).pushNamed('/usuarios');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.lightbulb),
+                title: const Text('Dispositivos'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).pushNamed('/dispositivos');
+                },
+              ),
+            ],
           ],
         ),
       ),
