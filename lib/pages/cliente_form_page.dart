@@ -167,7 +167,11 @@ class _ClienteFormPageState extends State<ClienteFormPage> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedRepId,
+                // só mostra o valor atual se ele estiver na lista de representantes
+                value:
+                    _representantes.any((u) => u.id == _selectedRepId)
+                        ? _selectedRepId
+                        : null,
                 decoration: const InputDecoration(labelText: 'Representante'),
                 items:
                     _representantes

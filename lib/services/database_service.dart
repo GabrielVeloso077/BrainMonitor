@@ -4,7 +4,6 @@ import 'package:firebase_database/firebase_database.dart';
 import '../models/brain_data.dart';
 import '../models/brain_entry.dart';
 import '../models/models.dart';
-import 'package:flutter/foundation.dart';
 
 class DatabaseService {
   final String _uid;
@@ -18,11 +17,11 @@ class DatabaseService {
             databaseURL: 'https://piloto-minas-laser.firebaseio.com',
           ).ref();
 
-  /// Instância para operações de usuário (sem deviceId)
+  /// Para operações de usuários (sem deviceId)
   factory DatabaseService.forUserDevices(String uid) =>
       DatabaseService._(uid, null);
 
-  /// Instância para operações de dispositivo específico
+  /// Para um dispositivo específico
   factory DatabaseService.forDevice(String uid, String deviceId) =>
       DatabaseService._(uid, deviceId);
 
@@ -30,7 +29,6 @@ class DatabaseService {
 
   Future<List<Cliente>> listClientes() async {
     final snap = await _baseRef.child('clientes').get();
-    print('>>> listClientes snapshot.value = ${snap.value}');
     final map = (snap.value as Map?)?.cast<String, dynamic>() ?? {};
     return map.entries
         .map(
@@ -60,15 +58,14 @@ class DatabaseService {
 
   // ==================== USUÁRIOS CRUD ====================
 
-  /// Lista usuários, carregando dados de cada subnó 'regsiter' e 'devices'
+  /// Lista usuários, opcionalmente filtrando por cliente
   Future<List<Usuario>> listUsuarios({String? clienteId}) async {
     final snap = await _baseRef.child('users').get();
     final uids =
         (snap.value as Map?)?.cast<String, dynamic>().keys.toList() ?? [];
     final users = <Usuario>[];
     for (var uid in uids) {
-      final u = await getUsuario(uid);
-      users.add(u);
+      users.add(await getUsuario(uid));
     }
     if (clienteId != null) {
       return users.where((u) => u.clienteId == clienteId).toList();
@@ -76,14 +73,14 @@ class DatabaseService {
     return users;
   }
 
-  /// Busca usuário a partir da estrutura antiga (/users/{uid}/regsiter e /users/{uid}/devices)
+  /// Lê usuário de acordo com estrutura antiga (/regsiter e /devices)
   Future<Usuario> getUsuario(String uid) async {
     final regSnap = await _baseRef.child('users/$uid/regsiter').get();
     final regMap = (regSnap.value as Map?)?.cast<String, dynamic>() ?? {};
     final devSnap = await _baseRef.child('users/$uid/devices').get();
     final devMap = (devSnap.value as Map?)?.cast<String, dynamic>() ?? {};
 
-    // Determina perfilId a partir do campo 'class'
+    // PerfilId a partir de 'class'
     final classVal = regMap['class'];
     int perfilId;
     if (classVal is int) {
@@ -97,8 +94,6 @@ class DatabaseService {
       );
       perfilId = idx != -1 ? idx + 1 : PerfilTipo.usuarioComum.id;
     }
-
-    // Converte para PerfilTipo, default para usuarioComum se inválido
     late PerfilTipo perfilTipo;
     try {
       perfilTipo = PerfilTipoExtension.fromId(perfilId);
@@ -111,19 +106,7 @@ class DatabaseService {
       name: regMap['name'] as String? ?? '',
       email: regMap['Email'] as String? ?? '',
       perfil: perfilTipo,
-      clienteId: regMap['company'] as String?,
-      dispositivosPermitidos:
-          devMap.entries
-              .where((e) => e.value == true)
-              .map((e) => e.key)
-              .toList(),
-    );
-    (
-      id: uid,
-      name: regMap['name'] as String? ?? '',
-      email: regMap['Email'] as String? ?? '',
-      perfil: PerfilTipoExtension.fromId(perfilId),
-      clienteId: regMap['company'] as String?,
+      clienteId: regMap['company']?.toString(),
       dispositivosPermitidos:
           devMap.entries
               .where((e) => e.value == true)
@@ -132,38 +115,59 @@ class DatabaseService {
     );
   }
 
-  /// Cria novo usuário
+  /// Cria novo usuário em /users/{uid}/regsiter e /users/{uid}/devices
   Future<void> createUsuario(Usuario usuario) async {
-    await _baseRef.child('users/${usuario.id}').set(usuario.toMap());
+    final regMap = {
+      'name': usuario.name,
+      'Email': usuario.email,
+      'class': usuario.perfil.id,
+      if (usuario.clienteId != null) 'company': usuario.clienteId!,
+    };
+    final devicesMap = {for (var d in usuario.dispositivosPermitidos) d: true};
+    await _baseRef.child('users/${usuario.id}/regsiter').set(regMap);
+    await _baseRef.child('users/${usuario.id}/devices').set(devicesMap);
   }
 
-  /// Atualiza usuário existente
+  /// Atualiza usuário em /users/{uid}/regsiter e /users/{uid}/devices
   Future<void> updateUsuario(Usuario usuario) async {
-    await _baseRef.child('users/${usuario.id}').update(usuario.toMap());
+    final regMap = {
+      'name': usuario.name,
+      'Email': usuario.email,
+      'class': usuario.perfil.id,
+      if (usuario.clienteId != null) 'company': usuario.clienteId!,
+    };
+    final devicesMap = {for (var d in usuario.dispositivosPermitidos) d: true};
+    await _baseRef.child('users/${usuario.id}/regsiter').update(regMap);
+    await _baseRef.child('users/${usuario.id}/devices').set(devicesMap);
   }
 
-  /// Remove usuário
+  /// Remove usuário inteiro em /users/{uid}
   Future<void> deleteUsuario(String uid) async {
     await _baseRef.child('users/$uid').remove();
   }
 
-  // ==================== DISPOSITIVOS ====================
+  // ==================== DISPOSITIVOS & LOGS ====================
 
-  /// Dispositivos permitidos para o usuário atual
   Future<List<String>> permittedDeviceIds() async {
     final snap = await _baseRef.child('users/$_uid/devices').get();
     final map = (snap.value as Map?)?.cast<String, dynamic>() ?? {};
     return map.keys.toList();
   }
 
-  /// Lista todos dispositivos no sistema
   Future<List<String>> listAllDeviceIds() async {
     final snap = await _baseRef.child('dispositivos').get();
     final map = (snap.value as Map?)?.cast<String, dynamic>() ?? {};
-    return map.keys.toList();
+    return map.keys.cast<String>().toList();
   }
 
-  // ==================== LOGS ====================
+  Future<Map<String, dynamic>?> getDeviceInfo(String deviceId) async {
+    final snap = await _baseRef.child('dispositivos/$deviceId/info').get();
+    return (snap.value as Map?)?.cast<String, dynamic>();
+  }
+
+  Future<void> setDeviceInfo(String deviceId, Map<String, dynamic> info) async {
+    await _baseRef.child('dispositivos/$deviceId/info').set(info);
+  }
 
   DatabaseReference get logsRef {
     if (_deviceId == null) throw StateError('Use forDevice antes');
