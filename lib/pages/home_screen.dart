@@ -1,22 +1,20 @@
 // lib/pages/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../services/database_service.dart';
 import '../models/models.dart';
-import 'overview_page.dart';
+
+import 'overview_page.dart'; // visão geral global (sem deviceId)
+import 'device_details_page.dart'; // detalhes unitários (com deviceId)
 import 'history_page.dart';
 import 'graphs_page.dart';
 import 'settings_page.dart';
 import 'clientes_page.dart';
-import 'cliente_form_page.dart';
 import 'usuarios_page.dart';
-import 'usuario_form_page.dart';
-import 'dispositivos_page.dart';
-import 'dispositivos_form_page.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -42,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _isAllowed =
           user.perfil == PerfilTipo.admin ||
           user.perfil == PerfilTipo.moderador;
+
       // Dispositivos permitidos
       final devices =
           await DatabaseService.forUserDevices(uid).permittedDeviceIds();
@@ -50,11 +49,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadingDevices = false;
         if (_devices.isNotEmpty) {
           _selectedDevice = _devices.first;
-          _page = OverviewPage(deviceId: _selectedDevice!);
+          // Página inicial: detalhes do primeiro device
+          _page = const OverviewPage();
         }
       });
     } catch (e) {
-      // Tratar erros
       setState(() {
         _devices = [];
         _loadingDevices = false;
@@ -89,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (id == null) return;
             setState(() {
               _selectedDevice = id;
-              _page = OverviewPage(deviceId: id);
+              _page = DeviceDetailsPage(deviceId: id);
             });
           },
           items:
@@ -107,11 +106,20 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           children: [
             const DrawerHeader(child: Text('Menu')),
+            // Visão Geral Global
             ListTile(
-              leading: const Icon(Icons.home),
+              leading: const Icon(Icons.dashboard),
               title: const Text('Visão Geral'),
+              onTap: () => _switchPage(const OverviewPage()),
+            ),
+            // Visão Detalhada do Device Selecionado
+            ListTile(
+              leading: const Icon(Icons.info),
+              title: const Text('Detalhes do Dispositivo'),
               onTap:
-                  () => _switchPage(OverviewPage(deviceId: _selectedDevice!)),
+                  () => _switchPage(
+                    DeviceDetailsPage(deviceId: _selectedDevice!),
+                  ),
             ),
             ListTile(
               leading: const Icon(Icons.history),
@@ -126,25 +134,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Configurações'),
-              onTap: () => _switchPage(SettingsPage()),
+              onTap: () => _switchPage(const SettingsPage()),
             ),
-            // Botão CRUD Clientes somente para Admin/Moderador
             if (_isAllowed) ...[
               ListTile(
                 leading: const Icon(Icons.people),
                 title: const Text('Clientes'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).pushNamed('/clientes');
-                },
+                onTap: () => Navigator.pushNamed(context, '/clientes'),
               ),
               ListTile(
-                leading: const Icon(Icons.people_outline),
+                leading: const Icon(Icons.person),
                 title: const Text('Usuários'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).pushNamed('/usuarios');
-                },
+                onTap: () => Navigator.pushNamed(context, '/usuarios'),
               ),
               ListTile(
                 leading: const Icon(Icons.lightbulb),

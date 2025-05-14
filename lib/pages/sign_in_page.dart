@@ -14,7 +14,7 @@ class _SignInPageState extends State<SignInPage> {
   final _emailCtl = TextEditingController();
   final _passCtl = TextEditingController();
   bool _loading = false;
-  bool _obscurePassword = true; // <— controla a visibilidade
+  bool _obscurePassword = true; // controla a visibilidade da senha
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
@@ -24,7 +24,7 @@ class _SignInPageState extends State<SignInPage> {
         email: _emailCtl.text.trim(),
         pass: _passCtl.text.trim(),
       );
-      // se sucesso, o StreamBuilder em main.dart vai levar pra HomeScreen
+      // Em caso de sucesso, o StreamBuilder em main.dart muda para HomeScreen
     } on Exception catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao entrar: ${e.toString()}')),
@@ -35,7 +35,7 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   @override
-  Widget build(BuildContext c) {
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -50,11 +50,8 @@ class _SignInPageState extends State<SignInPage> {
                 TextFormField(
                   controller: _emailCtl,
                   decoration: const InputDecoration(labelText: 'Email'),
-                  validator:
-                      (v) =>
-                          v != null && v.contains('@')
-                              ? null
-                              : 'Email inválido',
+                  validator: (v) =>
+                      v != null && v.contains('@') ? null : 'Email inválido',
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -75,29 +72,37 @@ class _SignInPageState extends State<SignInPage> {
                     ),
                   ),
                   obscureText: _obscurePassword,
-                  validator:
-                      (v) =>
-                          (v != null && v.length >= 6)
-                              ? null
-                              : 'Mínimo 6 caracteres',
+                  validator: (v) =>
+                      (v != null && v.length >= 6) ? null : 'Mínimo 6 caracteres',
                 ),
                 const SizedBox(height: 32),
                 _loading
                     ? const CircularProgressIndicator()
                     : ElevatedButton(
-                      onPressed: _submit,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 48,
-                          vertical: 12,
+                        onPressed: _submit,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 48,
+                            vertical: 12,
+                          ),
+                          child: Text('Entrar'),
                         ),
-                        child: Text('Entrar'),
                       ),
-                    ),
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, '/forgot'),
                   child: const Text('Esqueci minha senha'),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Não tem uma conta?'),
+                    TextButton(
+                      onPressed: () => Navigator.pushNamed(context, '/signup'),
+                      child: const Text('Cadastre-se'),
+                    ),
+                  ],
                 ),
               ],
             ),

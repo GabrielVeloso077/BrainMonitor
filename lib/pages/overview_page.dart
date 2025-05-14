@@ -1,222 +1,243 @@
 // lib/pages/overview_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/database_service.dart';
 import '../models/brain_entry.dart';
+import 'alarmes_ativos_page.dart';
+import 'device_details_page.dart';
 
-class OverviewPage extends StatelessWidget {
+/// Modelo de dados para visão geral de um dispositivo
+class DeviceOverviewData {
   final String deviceId;
+  final String cliente;
+  final double? latitude;
+  final double? longitude;
+  final String lastUpdate;
+  final bool alarmActive;
+  final double batteryVoltage;
 
-  const OverviewPage({Key? key, required this.deviceId}) : super(key: key);
+  DeviceOverviewData({
+    required this.deviceId,
+    required this.cliente,
+    this.latitude,
+    this.longitude,
+    required this.lastUpdate,
+    required this.alarmActive,
+    required this.batteryVoltage,
+  });
+}
 
-  // Só os alarmes que queremos e seus nomes
-  static const Map<String, String> alarmNames = {
-    'A10': 'Sem Comunicação com Placa de Acionamento',
-    'A12': 'Sem Comunicação com Controlador de Carga',
-    'A15': 'SdCard Desconectado',
-    'A4': 'Sensor de Norte não Reconhecido',
-    'A8': 'Fora de Operação + 30 dias',
-  };
+/// Visão geral de todos os dispositivos com mapa e tabela expansível
+class OverviewPage extends StatefulWidget {
+  const OverviewPage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  State<OverviewPage> createState() => _OverviewPageState();
+}
+
+class _OverviewPageState extends State<OverviewPage> {
+  late final DatabaseService _db;
+  final List<String> _deviceIds = [];
+  final Map<String, DeviceOverviewData> _dataMap = {};
+  bool _loading = true;
+  bool _hasAlarm = false;
+  String? _errorMessage;
+  GoogleMapController? _mapController;
+
+  @override
+  void initState() {
+    super.initState();
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    final svc = DatabaseService.forDevice(uid, deviceId);
+    _db = DatabaseService.forUserDevices(uid);
+    _loadAll(uid);
+  }
 
-    return StreamBuilder<BrainEntry>(
-      stream: svc.entryStream,
-      builder: (ctx, snapEntry) {
-        if (!snapEntry.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  Future<DeviceOverviewData> _fetchData(String uid, String id) async {
+    // Busca informações estáticas
+    final infoMap = await _db.getDeviceInfo(id) as Map<String, dynamic>? ?? {};
+    final cliente = infoMap['cliente']?.toString() ?? '';
 
-        final entry = snapEntry.data!;
+    // Inicializa variáveis de log
+    DateTime? dt;
+    double? lat;
+    double? lng;
+    bool hasAlarm = false;
+    double vb = 0;
+    try {
+      // Busca último log
+      final logs = await DatabaseService.forDevice(uid, id).fetchRecentLogs(1);
+      if (logs.isNotEmpty) {
+        final entry = logs.first;
+        dt = entry.timestamp;
+        lat = entry.data.latitude;
+        lng = entry.data.longitude;
+        hasAlarm = entry.data.alarmes.values.any((v) => v);
+        vb = entry.data.vBateria;
+      }
+    } catch (_) {}
 
-        return SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 16),
+    // Formata data
+    String lastUpdate = '';
+    if (dt != null) {
+      lastUpdate =
+          '${dt.day.toString().padLeft(2, '0')}/'
+          '${dt.month.toString().padLeft(2, '0')}/'
+          '${dt.year} '
+          '${dt.hour.toString().padLeft(2, '0')}:''${dt.minute.toString().padLeft(2, '0')}';
+    }
 
-              // ——————————————————————————
-              // TÍTULO DO APP
-              Center(
-                child: Text(
-                  'Brain Monitor',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // ——————————————————————————
-              // ÚLTIMA ATUALIZAÇÃO
-              Center(
-                child: Text(
-                  'Última atualização: '
-                  '${entry.timestamp.hour.toString().padLeft(2, '0')}:'
-                  '${entry.timestamp.minute.toString().padLeft(2, '0')}  '
-                  '${entry.timestamp.day.toString().padLeft(2, '0')}/'
-                  '${entry.timestamp.month.toString().padLeft(2, '0')}/'
-                  '${entry.timestamp.year}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // ——————————————————————————
-              // Card de Métricas
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _metric(context, 'VBateria', '${entry.data.vBateria} V'),
-                    _metric(context, 'VPainel', '${entry.data.vPainel} V'),
-                    _metric(context, 'IBateria', '${entry.data.iBateria} A'),
-                    _metric(context, 'IPainel', '${entry.data.iPainel} A'),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // ——————————————————————————
-              // Card do Mapa
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: SizedBox(
-                  height: 300,
-                  child: GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: LatLng(entry.data.latitude, entry.data.longitude),
-                      zoom: 15,
-                    ),
-                    markers: {
-                      Marker(
-                        markerId: const MarkerId('pos'),
-                        position: LatLng(
-                          entry.data.latitude,
-                          entry.data.longitude,
-                        ),
-                      ),
-                    },
-                  ),
-                ),
-              ),
-
-              // ——————————————————————————
-              // Card de Alarmes do Sistema (JSON)
-              StreamBuilder<Map<String, dynamic>>(
-                stream: svc.infoStream,
-                builder: (ctx2, snapInfo) {
-                  final info = snapInfo.data ?? {};
-                  final numBaterias = (info['numerodebaterias'] ?? 0) as num;
-                  final hora = entry.timestamp.hour;
-                  final vp = entry.data.vPainel;
-                  final vb = entry.data.vBateria;
-
-                  // Filtrar alarmes do sistema ativos
-                  final sistemaAtivos =
-                      entry.data.alarmes.entries
-                          .where(
-                            (e) => alarmNames.containsKey(e.key) && e.value,
-                          )
-                          .map((e) => alarmNames[e.key]!)
-                          .toList();
-
-                  // Gerar alarmes manuais
-                  final manualList = <String>[];
-                  if (hora >= 8 && hora <= 17 && vp < 36) {
-                    manualList.add('Baixa Geração dos Módulos Solares');
-                  }
-                  if (numBaterias > 0 &&
-                      vb >= 11.1 * numBaterias &&
-                      vb <= 11.5 * numBaterias) {
-                    manualList.add('Pré- Baixa tensão no Banco de Baterias');
-                  }
-                  if (numBaterias > 0 && vb < 11.1 * numBaterias) {
-                    manualList.add(
-                      'LVD - Nível Crítico de Tensão no Banco de Baterias',
-                    );
-                  }
-
-                  // Combinar ambos
-                  final todosAlarmes = [...sistemaAtivos, ...manualList];
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Alarmes',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-
-                          if (todosAlarmes.isEmpty)
-                            Text(
-                              'Nenhum alarme ativo',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-
-                          ...todosAlarmes.map(
-                            (nome) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    sistemaAtivos.contains(nome)
-                                        ? Icons.warning
-                                        : Icons.bolt,
-                                    color:
-                                        sistemaAtivos.contains(nome)
-                                            ? Colors.red
-                                            : Colors.orange,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      nome,
-                                      style:
-                                          Theme.of(context).textTheme.bodyLarge,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
+    return DeviceOverviewData(
+      deviceId: id,
+      cliente: cliente,
+      latitude: lat,
+      longitude: lng,
+      lastUpdate: lastUpdate,
+      alarmActive: hasAlarm,
+      batteryVoltage: vb,
     );
   }
 
-  Widget _metric(BuildContext ctx, String label, String value) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: Theme.of(ctx).textTheme.bodySmall),
-        const SizedBox(height: 4),
-        Text(value, style: Theme.of(ctx).textTheme.titleLarge),
-      ],
+  Future<void> _loadAll(String uid) async {
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+      _hasAlarm = false;
+    });
+    try {
+      final ids = await _db.permittedDeviceIds();
+      final results = await Future.wait(ids.map((id) => _fetchData(uid, id)));
+      _dataMap.clear();
+      _deviceIds.clear();
+      for (var data in results) {
+        _dataMap[data.deviceId] = data;
+        _deviceIds.add(data.deviceId);
+        if (data.alarmActive) _hasAlarm = true;
+      }
+      setState(() => _loading = false);
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Erro ao carregar dados: \$e';
+      });
+    }
+  }
+
+  /// Ajusta câmera para exibir todos os marcadores
+  void _fitMarkers() {
+    if (_dataMap.isEmpty || _mapController == null) return;
+    final coords = _dataMap.values
+        .where((d) => d.latitude != null && d.longitude != null)
+        .map((d) => LatLng(d.latitude!, d.longitude!));
+    if (coords.isEmpty) return;
+    double minLat = coords.first.latitude;
+    double maxLat = coords.first.latitude;
+    double minLng = coords.first.longitude;
+    double maxLng = coords.first.longitude;
+    for (var c in coords) {
+      minLat = c.latitude < minLat ? c.latitude : minLat;
+      maxLat = c.latitude > maxLat ? c.latitude : maxLat;
+      minLng = c.longitude < minLng ? c.longitude : minLng;
+      maxLng = c.longitude > maxLng ? c.longitude : maxLng;
+    }
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Cria marcadores
+    final initial = const LatLng(0, 0);
+    final markers = _dataMap.values
+        .where((d) => d.latitude != null && d.longitude != null)
+        .map((d) => Marker(
+              markerId: MarkerId(d.deviceId),
+              position: LatLng(d.latitude!, d.longitude!),
+              infoWindow: InfoWindow(
+                title: d.deviceId,
+                snippet: 'Cliente: ${d.cliente}\nÚltima: ${d.lastUpdate}',
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => DeviceDetailsPage(deviceId: d.deviceId))),
+              ),
+            ))
+        .toSet();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Visão Geral'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.warning, color: _hasAlarm ? Colors.red : Colors.white),
+            onPressed: _hasAlarm
+                ? () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AlarmesAtivosPage()),
+                    )
+                : null,
+          )
+        ],
+      ),
+      body: ListView(
+        children: [
+          SizedBox(
+            height: 400,
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(target: initial, zoom: 1),
+              markers: markers,
+              onMapCreated: (ctrl) {
+                _mapController = ctrl;
+                _fitMarkers();
+              },
+            ),
+          ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(),
+            ),
+          if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+            ),
+          ExpansionTile(
+            title: const Text('Detalhes dos Dispositivos'),
+            children: [
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('ID')),
+                    DataColumn(label: Text('Cliente')),
+                    DataColumn(label: Text('Última Atualização')),
+                    DataColumn(label: Text('Tensão (VB)')),
+                    DataColumn(label: Text('Status')),
+                  ],
+                  rows: _deviceIds.map((id) {
+                    final d = _dataMap[id]!;
+                    return DataRow(cells: [
+                      DataCell(Text(d.deviceId)),
+                      DataCell(Text(d.cliente)),
+                      DataCell(Text(d.lastUpdate)),
+                      DataCell(Text('${d.batteryVoltage} V')),
+                      DataCell(Icon(
+                        d.alarmActive ? Icons.error : Icons.check,
+                        color: d.alarmActive ? Colors.red : Colors.green,
+                      )),
+                    ]);
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

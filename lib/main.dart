@@ -18,6 +18,8 @@ import 'pages/usuarios_page.dart';
 import 'pages/usuario_form_page.dart';
 import 'pages/dispositivos_page.dart';
 import 'pages/dispositivos_form_page.dart';
+import 'pages/device_details_page.dart';
+import 'pages/overview_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +49,7 @@ class MyApp extends StatelessWidget {
         // Rotas de Clientes
         '/clientes': (_) => const ClientesPage(),
         '/clienteForm': (_) => const ClienteFormPage(),
-
+        '/overview': (_) => const OverviewPage(),
         // Rotas de Usuários
         '/usuarios': (_) => const UsuariosPage(),
         '/usuarioForm': (_) => const UsuarioFormPage(),
@@ -55,6 +57,7 @@ class MyApp extends StatelessWidget {
         // Rotas de Dispositivos
         '/dispositivos': (_) => const DispositivosPage(),
         '/dispositivoForm': (_) => const DispositivoFormPage(),
+        // Rotas de Detalhes do Dispositivo
       },
     );
   }

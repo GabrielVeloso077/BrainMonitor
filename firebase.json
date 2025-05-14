@@ -1,31 +1,43 @@
 {
-    "flutter": {
-      "platforms": {
-        "android": {
-          "default": {
-            "projectId": "teste1-ed9c8",
-            "appId": "1:966677763899:android:c4d6debe7efb77a915491e",
-            "fileOutput": "android/app/google-services.json"
-          }
-        }
-      },
-      "dart": {
-        "lib/firebase_options.dart": {
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
           "projectId": "teste1-ed9c8",
-          "configurations": {
-            "android": "1:966677763899:android:c4d6debe7efb77a915491e",
-            "ios": "1:966677763899:ios:7690b9f3b74a1ed415491e",
-            "macos": "1:966677763899:ios:7690b9f3b74a1ed415491e",
-            "web": "1:966677763899:web:b7fac1353fccfc0b15491e",
-            "windows": "1:966677763899:web:050c9ac35a84348d15491e"
-          }
+          "appId": "1:966677763899:android:c4d6debe7efb77a915491e",
+          "fileOutput": "android/app/google-services.json"
         }
       }
     },
-  
-    // Configuração de Functions para Firebase CLI
-    "functions": {
-      "source": "functions",
-      "runtime": "nodejs18"
+    "dart": {
+      "lib/firebase_options.dart": {
+        "projectId": "teste1-ed9c8",
+        "configurations": {
+          "android": "1:966677763899:android:c4d6debe7efb77a915491e",
+          "ios": "1:966677763899:ios:7690b9f3b74a1ed415491e",
+          "macos": "1:966677763899:ios:7690b9f3b74a1ed415491e",
+          "web": "1:966677763899:web:b7fac1353fccfc0b15491e",
+          "windows": "1:966677763899:web:050c9ac35a84348d15491e"
+        }
+      }
     }
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
 }

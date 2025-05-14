@@ -39,14 +39,17 @@ dependencies:
   google_maps_flutter: ^2.4.0
   google_fonts: ^6.2.1
  # Substitua fl_chart por charts_flutter:
-  fl_chart: ^0.60.0
+  fl_chart: ^0.71.0
   firebase_auth: ^5.5.3
   cloud_functions: ^5.5.0
+
+dependency_overrides:
+  google_maps_flutter_web: ^0.5.12
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
+  flutter_launcher_icons: "^0.14.3"
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -66,6 +69,12 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+flutter_icons:
+  # Habilita geração para Android e iOS
+  android:  true
+  ios:      true
+  # caminho para sua imagem quadrada (mínimo 1024×1024 recomendado)
+  image_path: "assets/LOGO.png"
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
