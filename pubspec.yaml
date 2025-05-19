@@ -38,7 +38,10 @@ dependencies:
   firebase_database: 11.3.5
   google_maps_flutter: ^2.4.0
   google_fonts: ^6.2.1
+  intl: ^0.20.2
  # Substitua fl_chart por charts_flutter:
+  csv: ^6.0.0
+  share_plus: ^11.0.0
   fl_chart: ^0.71.0
   firebase_auth: ^5.5.3
   cloud_functions: ^5.5.0

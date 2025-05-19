@@ -1,1 +1,0 @@
- C:\\projetos\\BrainMonitor\\.dart_tool\\flutter_build\\0064571beaa4a826d2e3477295b6b675\\native_assets.json: 

@@ -88,7 +88,23 @@ class _HomeScreenState extends State<HomeScreen> {
             if (id == null) return;
             setState(() {
               _selectedDevice = id;
-              _page = DeviceDetailsPage(deviceId: id);
+              if (_page is DeviceDetailsPage) {
+                _page = DeviceDetailsPage(
+                  key: UniqueKey(),
+                  deviceId: _selectedDevice!,
+                );
+              } else if (_page is HistoryPage) {
+                _page = HistoryPage(
+                  key: UniqueKey(),
+                  deviceId: _selectedDevice!,
+                );
+              } else if (_page is GraphsPage) {
+                _page = GraphsPage(
+                  key: UniqueKey(),
+                  deviceId: _selectedDevice!,
+                );
+              }
+              // Se estiver em OverviewPage ou SettingsPage, não faz nada
             });
           },
           items:

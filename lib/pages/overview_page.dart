@@ -85,7 +85,8 @@ class _OverviewPageState extends State<OverviewPage> {
           '${dt.day.toString().padLeft(2, '0')}/'
           '${dt.month.toString().padLeft(2, '0')}/'
           '${dt.year} '
-          '${dt.hour.toString().padLeft(2, '0')}:''${dt.minute.toString().padLeft(2, '0')}';
+          '${dt.hour.toString().padLeft(2, '0')}:'
+          '${dt.minute.toString().padLeft(2, '0')}';
     }
 
     return DeviceOverviewData(
@@ -152,35 +153,48 @@ class _OverviewPageState extends State<OverviewPage> {
   Widget build(BuildContext context) {
     // Cria marcadores
     final initial = const LatLng(0, 0);
-    final markers = _dataMap.values
-        .where((d) => d.latitude != null && d.longitude != null)
-        .map((d) => Marker(
-              markerId: MarkerId(d.deviceId),
-              position: LatLng(d.latitude!, d.longitude!),
-              infoWindow: InfoWindow(
-                title: d.deviceId,
-                snippet: 'Cliente: ${d.cliente}\nÚltima: ${d.lastUpdate}',
-                onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => DeviceDetailsPage(deviceId: d.deviceId))),
+    final markers =
+        _dataMap.values
+            .where((d) => d.latitude != null && d.longitude != null)
+            .map(
+              (d) => Marker(
+                markerId: MarkerId(d.deviceId),
+                position: LatLng(d.latitude!, d.longitude!),
+                infoWindow: InfoWindow(
+                  title: d.deviceId,
+                  snippet: 'Cliente: ${d.cliente}\nÚltima: ${d.lastUpdate}',
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) => DeviceDetailsPage(deviceId: d.deviceId),
+                        ),
+                      ),
+                ),
               ),
-            ))
-        .toSet();
+            )
+            .toSet();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Visão Geral'),
         actions: [
           IconButton(
-            icon: Icon(Icons.warning, color: _hasAlarm ? Colors.red : Colors.white),
-            onPressed: _hasAlarm
-                ? () => Navigator.push(
+            icon: Icon(
+              Icons.warning,
+              color: _hasAlarm ? Colors.red : Colors.white,
+            ),
+            onPressed:
+                _hasAlarm
+                    ? () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const AlarmesAtivosPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const AlarmesAtivosPage(),
+                      ),
                     )
-                : null,
-          )
+                    : null,
+          ),
         ],
       ),
       body: ListView(
@@ -204,7 +218,10 @@ class _OverviewPageState extends State<OverviewPage> {
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           ExpansionTile(
             title: const Text('Detalhes dos Dispositivos'),
@@ -212,6 +229,8 @@ class _OverviewPageState extends State<OverviewPage> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
+                  // desliga aquele quadradinho à esquerda
+                  showCheckboxColumn: false,
                   columns: const [
                     DataColumn(label: Text('ID')),
                     DataColumn(label: Text('Cliente')),
@@ -219,19 +238,38 @@ class _OverviewPageState extends State<OverviewPage> {
                     DataColumn(label: Text('Tensão (VB)')),
                     DataColumn(label: Text('Status')),
                   ],
-                  rows: _deviceIds.map((id) {
-                    final d = _dataMap[id]!;
-                    return DataRow(cells: [
-                      DataCell(Text(d.deviceId)),
-                      DataCell(Text(d.cliente)),
-                      DataCell(Text(d.lastUpdate)),
-                      DataCell(Text('${d.batteryVoltage} V')),
-                      DataCell(Icon(
-                        d.alarmActive ? Icons.error : Icons.check,
-                        color: d.alarmActive ? Colors.red : Colors.green,
-                      )),
-                    ]);
-                  }).toList(),
+                  rows:
+                      _deviceIds.map((id) {
+                        final d = _dataMap[id]!;
+                        return DataRow(
+                          onSelectChanged: (sel) {
+                            if (sel == true) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => DeviceDetailsPage(
+                                        deviceId: d.deviceId,
+                                      ),
+                                ),
+                              );
+                            }
+                          },
+                          cells: [
+                            DataCell(Text(d.deviceId)),
+                            DataCell(Text(d.cliente)),
+                            DataCell(Text(d.lastUpdate)),
+                            DataCell(Text('${d.batteryVoltage} V')),
+                            DataCell(
+                              Icon(
+                                d.alarmActive ? Icons.error : Icons.check,
+                                color:
+                                    d.alarmActive ? Colors.red : Colors.green,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
                 ),
               ),
             ],
